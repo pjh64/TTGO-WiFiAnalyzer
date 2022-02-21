@@ -38,7 +38,7 @@ TFT_eSPI tft ;
 
 #define GRAPH_BASELINE (HEIGHT - 18)
 #define GRAPH_HEIGHT (HEIGHT - 52)
-#define CHANNEL_WIDTH (WIDTH / 16)
+#define CHANNEL_WIDTH (WIDTH / 15)
 
 // RSSI RANGE
 #define RSSI_CEILING -40
@@ -87,7 +87,7 @@ void loop() {
   int n = WiFi.scanNetworks();
 
   // clear old graph
-  tft.fillRect(0, 0, 320, 224, TFT_BLACK);
+  tft.fillRect(0, 0, WIDTH, HEIGHT, TFT_BLACK);
   tft.setTextSize(0);
 
   if (n == 0) {
@@ -132,6 +132,7 @@ void loop() {
   tft.setCursor(0, 0);
   tft.print(n);
   tft.print(" networks found, suggested channels: ");
+  tft.println();
   bool listed_first_channel = false;
   for (int i = 1; i <= 11; i++) { // channels 12-14 may not available
     if ((i == 1) || (max_rssi[i - 2] < NEAR_CHANNEL_RSSI_ALLOW)) { // check previous channel signal strengh
@@ -140,7 +141,7 @@ void loop() {
           if (!listed_first_channel) {
             listed_first_channel = true;
           } else {
-            tft.print(", ");
+            tft.print(" ");
           }
           tft.print(i);
         }
@@ -149,16 +150,16 @@ void loop() {
   }
 
   // draw graph base axle
-  tft.drawFastHLine(0, GRAPH_BASELINE, 320, TFT_WHITE);
+  tft.drawFastHLine(0, GRAPH_BASELINE, WIDTH, TFT_WHITE);
   for (int i = 1; i <= 14; i++) {
     tft.setTextColor(channel_color[i - 1]);
     tft.setCursor((i * CHANNEL_WIDTH) - ((i < 10)?3:6), GRAPH_BASELINE + 2);
     tft.print(i);
     if (ap_count[i - 1] > 0) {
       tft.setCursor((i * CHANNEL_WIDTH) - ((ap_count[i - 1] < 10)?9:12), GRAPH_BASELINE + 11);
-      tft.print('(');
+      tft.print('[');
       tft.print(ap_count[i - 1]);
-      tft.print(')');
+      tft.print(']');
     }
   }
 
