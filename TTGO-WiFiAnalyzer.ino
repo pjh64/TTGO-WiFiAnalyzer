@@ -10,8 +10,11 @@
 #define LED_PWR_PIN 2 // D4
 #endif
 
+#include <TFT_eSPI.h> // Graphics and font library
 #include <SPI.h>
-#include <TFT_eSPI.h>    // Core graphics library
+
+TFT_eSPI tft = TFT_eSPI();  
+TFT_eSprite spr = TFT_eSprite(&tft);
 
 #define TFT_MOSI 12
 #define TFT_CLK 13
@@ -21,13 +24,11 @@
 #define TFT_DC 14
 #define TFT_CS 0
 // Use hardware SPI and the above for CS/DC
-//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 #define TFT_MOSI 12
 #define TFT_CLK 13
 #define TFT_RST 2
 #define TFT_MISO 3
 // If using the breakout, change pins as desired
-TFT_eSPI tft ;
 
 
 // Graph constant
@@ -68,15 +69,17 @@ void setup() {
   digitalWrite(LCD_PWR_PIN, HIGH); // power on
   digitalWrite(LED_PWR_PIN, HIGH); // power on
 #endif
+  
   tft.begin();
   tft.setRotation(1);
-
+  
 // Set WiFi to station mode and disconnect from an AP if it was previously connected
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 
   // rest for WiFi routine?
   delay(100);
+  spr.createSprite(WIDTH, HEIGHT);
 }
 
 void loop() {
@@ -87,13 +90,13 @@ void loop() {
   int n = WiFi.scanNetworks();
 
   // clear old graph
-  tft.fillRect(0, 0, WIDTH, HEIGHT, TFT_BLACK);
-  tft.setTextSize(0);
-
+  spr.fillRect(0, 0, WIDTH, HEIGHT, TFT_BLACK);
+  spr.setTextSize(0);
+  
   if (n == 0) {
-    tft.setTextColor(TFT_BLACK);
-    tft.setCursor(0, 0);
-    tft.println("no networks found");
+    spr.setTextColor(TFT_BLACK);
+    spr.setCursor(0, 0);
+    spr.println("no networks found");
   } else {
     // plot found WiFi info
     for (int i = 0; i < n; i++) {
@@ -108,16 +111,16 @@ void loop() {
         max_rssi[channel - 1] = rssi;
       }
 
-      tft.drawLine(channel * CHANNEL_WIDTH, GRAPH_BASELINE - height, (channel - 1) * CHANNEL_WIDTH, GRAPH_BASELINE + 1, color);
-      tft.drawLine(channel * CHANNEL_WIDTH, GRAPH_BASELINE - height, (channel + 1) * CHANNEL_WIDTH, GRAPH_BASELINE + 1, color);
-
+      spr.drawLine(channel * CHANNEL_WIDTH, GRAPH_BASELINE - height, (channel - 1) * CHANNEL_WIDTH, GRAPH_BASELINE + 1, color);
+      spr.drawLine(channel * CHANNEL_WIDTH, GRAPH_BASELINE - height, (channel + 1) * CHANNEL_WIDTH, GRAPH_BASELINE + 1, color);
+      
       // Print SSID, signal strengh and if not encrypted
-      tft.setTextColor(color);
-      tft.setCursor((channel - 1) * CHANNEL_WIDTH, GRAPH_BASELINE - 10 - height);
-      tft.print(WiFi.SSID(i));
-      tft.print('(');
-      tft.print(rssi);
-      tft.print(')');
+      spr.setTextColor(color);
+      spr.setCursor((channel - 1) * CHANNEL_WIDTH, GRAPH_BASELINE - 10 - height);
+      spr.print(WiFi.SSID(i));
+      spr.print('(');
+      spr.print(rssi);
+      spr.print(')');
       //if (WiFi.encryptionType(i) == ENC_TYPE_NONE) {
       //  tft.print('*');
       //}
@@ -128,11 +131,12 @@ void loop() {
   }
 
   // print WiFi stat
-  tft.setTextColor(TFT_WHITE);
-  tft.setCursor(0, 0);
-  tft.print(n);
-  tft.print(" networks found, suggested channels: ");
-  tft.println();
+  spr.pushSprite(0, 0);
+  spr.setTextColor(TFT_WHITE);
+  spr.setCursor(0, 0);
+  spr.print(n);
+  spr.print(" networks found, suggested channels: ");
+  spr.println();
   bool listed_first_channel = false;
   for (int i = 1; i <= 11; i++) { // channels 12-14 may not available
     if ((i == 1) || (max_rssi[i - 2] < NEAR_CHANNEL_RSSI_ALLOW)) { // check previous channel signal strengh
@@ -141,39 +145,33 @@ void loop() {
           if (!listed_first_channel) {
             listed_first_channel = true;
           } else {
-            tft.print(" ");
+            spr.print(" ");
           }
-          tft.print(i);
+          spr.print(i);
         }
       }
     }
   }
 
   // draw graph base axle
-  tft.drawFastHLine(0, GRAPH_BASELINE, WIDTH, TFT_WHITE);
+  spr.drawFastHLine(0, GRAPH_BASELINE, WIDTH, TFT_WHITE);
   for (int i = 1; i <= 14; i++) {
-    tft.setTextColor(channel_color[i - 1]);
-    tft.setCursor((i * CHANNEL_WIDTH) - ((i < 10)?3:6), GRAPH_BASELINE + 2);
-    tft.print(i);
+    spr.setTextColor(channel_color[i - 1]);
+    spr.setCursor((i * CHANNEL_WIDTH) - ((i < 10)?3:6), GRAPH_BASELINE + 2);
+    spr.print(i);
     if (ap_count[i - 1] > 0) {
-      tft.setCursor((i * CHANNEL_WIDTH) - ((ap_count[i - 1] < 10)?9:12), GRAPH_BASELINE + 11);
-      tft.print('[');
-      tft.print(ap_count[i - 1]);
-      tft.print(']');
+      spr.setCursor((i * CHANNEL_WIDTH) - ((ap_count[i - 1] < 10)?9:12), GRAPH_BASELINE + 11);
+      spr.print('[');
+      spr.print(ap_count[i - 1]);
+      spr.print(']');
+      
+      
+      
+      
     }
   }
 
-  // Wait a bit before scanning again
-  delay(5000);
+  spr.pushSprite(0, 0);
+  delay(5000); // Wait a bit before scanning again
 
-  //POWER SAVING
-  if (++scan_count >= SCAN_COUNT_SLEEP) {
-#if defined(PNP_PWR_TRANSISTOR)
-    pinMode(LCD_PWR_PIN, INPUT);   // disable pin
-#else
-    pinMode(LCD_PWR_PIN, INPUT);   // disable pin
-    pinMode(LED_PWR_PIN, INPUT);   // disable pin
-#endif
-    ESP.deepSleep(0);
-  }
 }
